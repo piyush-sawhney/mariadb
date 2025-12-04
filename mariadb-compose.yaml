@@ -4,24 +4,24 @@ services:
     container_name: mariadb-database
     restart: unless-stopped
 
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      start_period: 5s
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
     security_opt:
       - no-new-privileges:true
 
     tmpfs:
-      - /etc/mysql/encryption:rw,mode=700
+      - /etc/mysql/encryption:rw,mode=700,size=10M
 
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD?MYSQL_ROOT_PASSWORD is not set}
-      DB_ENCRYPTION_KEY: ${DB_ENCRYPTION_KEY?DB_ENCRYPTION_KEY is not set}
-      DB_KEY_PASSWORD: ${DB_KEY_PASSWORD?DB_KEY_PASSWORD is not set}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      DB_ENCRYPTION_KEY: ${DB_ENCRYPTION_KEY}
+      DB_KEY_PASSWORD: ${DB_KEY_PASSWORD}
       MARIADB_AUTO_UPGRADE: 1
+
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
     command: >
       bash -c "
@@ -52,9 +52,8 @@ services:
           --encrypt-tmp-files=ON
           --innodb-buffer-pool-size=1G
           --skip-symbolic-links
+          --log_error=stderr
       "
-
-
 
     volumes:
       - mariadb-data:/var/lib/mysql:rw
@@ -64,7 +63,6 @@ services:
 
 networks:
   mariadb-network:
-    external: false
 
 volumes:
   mariadb-data:
