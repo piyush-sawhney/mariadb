@@ -37,7 +37,7 @@ services:
         --collation-server=utf8mb4_unicode_ci
         --skip-character-set-client-handshake
         --skip-innodb-read-only-compressed
-        --plugin-load-add=file_key_management
+        --plugin-load-add=file_key_management=file_key_management.so
         --file-key-management-filename=/etc/mysql/encryption/keyfile.enc
         --file-key-management-filekey=FILE:/etc/mysql/encryption/keyfile.key
         --innodb-encrypt-tables=ON
