@@ -3,67 +3,54 @@ services:
     image: mariadb:11.8
     container_name: mariadb-database
     restart: unless-stopped
-
-    security_opt:
-      - no-new-privileges:true
-
-    tmpfs:
-      - /etc/mysql/encryption:rw,mode=700,size=10M
-
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      DB_ENCRYPTION_KEY: ${DB_ENCRYPTION_KEY}
-      DB_KEY_PASSWORD: ${DB_KEY_PASSWORD}
-      MARIADB_AUTO_UPGRADE: 1
-
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 5s
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 5s
-
-    command: >
-      bash -c "
-        set -e
-
-        mkdir -p /etc/mysql/encryption
-
-        echo \"$DB_ENCRYPTION_KEY\" | base64 -d > /etc/mysql/encryption/keyfile
-        echo \"$DB_KEY_PASSWORD\" > /etc/mysql/encryption/keyfile.key
-
-        openssl enc -aes-256-cbc -md sha1 -nosalt \
-          -pass file:/etc/mysql/encryption/keyfile.key \
-          -in /etc/mysql/encryption/keyfile \
-          -out /etc/mysql/encryption/keyfile.enc
-
-
-        exec docker-entrypoint.sh mariadbd
-          --character-set-server=utf8mb4
-          --collation-server=utf8mb4_unicode_ci
-          --skip-character-set-client-handshake
-          --skip-innodb-read-only-compressed
-          --plugin-load-add=file_key_management=file_key_management.so
-          --file-key-management-filename=/etc/mysql/encryption/keyfile.enc
-          --file-key-management-filekey=FILE:/etc/mysql/encryption/keyfile.key
-          --innodb-encrypt-tables=ON
-          --innodb-encrypt-log=ON
-          --innodb-encryption-threads=4
-          --encrypt-tmp-disk-tables=ON
-          --encrypt-tmp-files=ON
-          --innodb-buffer-pool-size=1G
-          --skip-symbolic-links
-          --log_error=stderr
-      "
-
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /etc/mysql/encryption:rw
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD?MYSQL_ROOT_PASSWORD is not set}
+      DB_ENCRYPTION_KEY: ${DB_ENCRYPTION_KEY?DB_ENCRYPTION_KEY is not set}
+      DB_KEY_PASSWORD: ${DB_KEY_PASSWORD?DB_KEY_PASSWORD is not set}
+      MARIADB_AUTO_UPGRADE: 1
+    command: |
+      bash -c '
+      mkdir -p /etc/mysql/encryption
+      echo "$DB_ENCRYPTION_KEY" | base64 -d > /etc/mysql/encryption/keyfile
+      echo "$DB_KEY_PASSWORD" > /etc/mysql/encryption/keyfile.key
+      openssl enc -aes-256-cbc -md sha1 -pass file:/etc/mysql/encryption/keyfile.key \
+        -in /etc/mysql/encryption/keyfile \
+        -out /etc/mysql/encryption/keyfile.enc
+      exec docker-entrypoint.sh mariadbd \
+        --character-set-server=utf8mb4 \
+        --collation-server=utf8mb4_unicode_ci \
+        --skip-character-set-client-handshake \
+        --skip-innodb-read-only-compressed \
+        --plugin-load-add=file_key_management \
+        --file-key-management-filename=/etc/mysql/encryption/keyfile.enc \
+        --file-key-management-filekey=FILE:/etc/mysql/encryption/keyfile.key \
+        --innodb-encrypt-tables=ON \
+        --innodb-encrypt-log=ON \
+        --innodb-encryption-threads=4 \
+        --encrypt-tmp-disk-tables=ON \
+        --encrypt-tmp-files=ON \
+        --innodb-buffer-pool-size=1G \
+        --skip-symbolic-links
+      '
     volumes:
       - mariadb-data:/var/lib/mysql:rw
-
     networks:
       - mariadb-network
 
 networks:
   mariadb-network:
+    name: mariadb-network
+    external: false
 
 volumes:
   mariadb-data:
