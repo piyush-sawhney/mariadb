@@ -32,10 +32,11 @@ services:
         echo \"$DB_ENCRYPTION_KEY\" | base64 -d > /etc/mysql/encryption/keyfile
         echo \"$DB_KEY_PASSWORD\" > /etc/mysql/encryption/keyfile.key
 
-        openssl enc -aes-256-cbc -md sha1 \
+        openssl enc -aes-256-cbc -md sha1 -nosalt \
           -pass file:/etc/mysql/encryption/keyfile.key \
           -in /etc/mysql/encryption/keyfile \
           -out /etc/mysql/encryption/keyfile.enc
+
 
         exec docker-entrypoint.sh mariadbd
           --character-set-server=utf8mb4
